@@ -1,12 +1,8 @@
 // 자막 번역기 Background Script
 class TranslationService {
   constructor() {
-    this.apiKeys = {
-      google: "", // Google Translate API 키
-      deepl: "", // DeepL API 키
-    };
-    this.translationProvider = "libre"; // 기본적으로 무료 서비스 사용
-    this.cache = new Map();
+    this.googleApiKey = "AIzaSyAMJXGdaeIqi9YGg0gna76ZjSwBYRrw-kY"; // Google Translate API 키를 직접 입력
+    this.translationProvider = "google";
     this.requestQueue = [];
     this.isProcessing = false;
     this.rateLimiter = {
@@ -18,26 +14,8 @@ class TranslationService {
   }
 
   init() {
-    this.loadApiKeys();
     this.setupMessageListener();
     this.setupRateLimiter();
-  }
-
-  async loadApiKeys() {
-    try {
-      const result = await chrome.storage.sync.get([
-        "apiKeys",
-        "translationProvider",
-      ]);
-      if (result.apiKeys) {
-        this.apiKeys = { ...this.apiKeys, ...result.apiKeys };
-      }
-      if (result.translationProvider) {
-        this.translationProvider = result.translationProvider;
-      }
-    } catch (error) {
-      console.log("API 키 로드 실패:", error);
-    }
   }
 
   setupMessageListener() {
@@ -45,15 +23,6 @@ class TranslationService {
       if (request.action === "translate") {
         this.handleTranslationRequest(request, sendResponse);
         return true; // 비동기 응답을 위해 true 반환
-      } else if (request.action === "updateApiKeys") {
-        this.updateApiKeys(request.apiKeys);
-        sendResponse({ success: true });
-      } else if (request.action === "updateTranslationProvider") {
-        this.updateTranslationProvider(request.provider);
-        sendResponse({ success: true });
-      } else if (request.action === "clearCache") {
-        this.clearCache();
-        sendResponse({ success: true });
       }
     });
   }
@@ -70,13 +39,6 @@ class TranslationService {
 
     if (!text || text.length < 2) {
       sendResponse({ error: "텍스트가 너무 짧습니다." });
-      return;
-    }
-
-    // 캐시 확인
-    const cacheKey = `${text}-${targetLanguage}`;
-    if (this.cache.has(cacheKey)) {
-      sendResponse({ translatedText: this.cache.get(cacheKey) });
       return;
     }
 
@@ -109,40 +71,41 @@ class TranslationService {
 
   async processTranslationRequest({ text, targetLanguage, sendResponse }) {
     try {
-      // 율제한 확인
-      if (this.rateLimiter.requests >= 50) {
+      // 요청 제한 확인
+      if (this.rateLimiter.requests >= 100) {
         sendResponse({ error: "요청 제한 초과. 잠시 후 다시 시도해주세요." });
+        return;
+      }
+
+      // targetLanguage가 2글자 ISO 639-1 코드인지 검증
+      if (
+        !targetLanguage ||
+        typeof targetLanguage !== "string" ||
+        targetLanguage.length !== 2
+      ) {
+        sendResponse({ error: `잘못된 target 언어 코드: ${targetLanguage}` });
+        return;
+      }
+
+      // 번역할 텍스트가 2글자 이상인지 검증
+      if (!text || typeof text !== "string" || text.trim().length < 2) {
+        sendResponse({ error: "번역할 텍스트가 너무 짧거나 비어 있습니다." });
         return;
       }
 
       this.rateLimiter.requests++;
 
-      let translatedText = "";
+      // 요청 body를 명확하게 구성
+      const body = {
+        q: text,
+        target: targetLanguage,
+        source: "auto",
+      };
+      console.log("[Google Translate 요청] body:", body);
 
-      switch (this.translationProvider) {
-        case "google":
-          translatedText = await this.translateWithGoogle(text, targetLanguage);
-          break;
-        case "deepl":
-          translatedText = await this.translateWithDeepL(text, targetLanguage);
-          break;
-        case "libre":
-        default:
-          translatedText = await this.translateWithLibre(text, targetLanguage);
-          break;
-      }
+      let translatedText = await this.translateWithGoogle(body);
 
       if (translatedText) {
-        // 캐시에 저장
-        const cacheKey = `${text}-${targetLanguage}`;
-        this.cache.set(cacheKey, translatedText);
-
-        // 캐시 크기 제한
-        if (this.cache.size > 1000) {
-          const firstKey = this.cache.keys().next().value;
-          this.cache.delete(firstKey);
-        }
-
         sendResponse({ translatedText });
       } else {
         sendResponse({ error: "번역 실패" });
@@ -153,24 +116,20 @@ class TranslationService {
     }
   }
 
-  async translateWithGoogle(text, targetLanguage) {
-    if (!this.apiKeys.google) {
+  async translateWithGoogle(body) {
+    if (!this.googleApiKey) {
       console.warn("Google Translate API 키가 설정되지 않았습니다.");
       return null;
     }
 
     try {
-      const url = `https://translation.googleapis.com/language/translate/v2?key=${this.apiKeys.google}`;
+      const url = `https://translation.googleapis.com/language/translate/v2?key=${this.googleApiKey}`;
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          q: text,
-          target: targetLanguage,
-          source: "auto",
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
@@ -186,110 +145,8 @@ class TranslationService {
     }
   }
 
-  async translateWithDeepL(text, targetLanguage) {
-    if (!this.apiKeys.deepl) {
-      console.warn("DeepL API 키가 설정되지 않았습니다.");
-      return null;
-    }
-
-    try {
-      const url = "https://api-free.deepl.com/v2/translate";
-      const formData = new FormData();
-      formData.append("text", text);
-      formData.append("target_lang", targetLanguage.toUpperCase());
-      formData.append("auth_key", this.apiKeys.deepl);
-
-      const response = await fetch(url, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.translations && data.translations.length > 0) {
-        return data.translations[0].text;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("DeepL 번역 오류:", error);
-      return null;
-    }
-  }
-
-  async translateWithLibre(text, targetLanguage) {
-    try {
-      // LibreTranslate 무료 서비스 사용
-      const response = await fetch(
-        "https://translate.argosopentech.com/translate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            q: text,
-            source: "auto",
-            target: targetLanguage,
-            format: "text",
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.translatedText) {
-        return data.translatedText;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("LibreTranslate 오류:", error);
-      // 백업으로 간단한 MyMemory API 사용
-      return await this.translateWithMyMemory(text, targetLanguage);
-    }
-  }
-
-  async translateWithMyMemory(text, targetLanguage) {
-    try {
-      const sourceLang = "en"; // 자동 감지 대신 영어로 고정
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-        text
-      )}&langpair=${sourceLang}|${targetLanguage}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.responseStatus === 200 && data.responseData) {
-        return data.responseData.translatedText;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("MyMemory 번역 오류:", error);
-      return null;
-    }
-  }
-
   sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  // API 키 업데이트
-  updateApiKeys(newKeys) {
-    this.apiKeys = { ...this.apiKeys, ...newKeys };
-    chrome.storage.sync.set({ apiKeys: this.apiKeys });
-  }
-
-  // 번역 제공자 변경
-  updateTranslationProvider(provider) {
-    this.translationProvider = provider;
-    chrome.storage.sync.set({ translationProvider: provider });
-  }
-
-  // 캐시 클리어
-  clearCache() {
-    this.cache.clear();
   }
 }
 
@@ -309,7 +166,7 @@ chrome.runtime.onInstalled.addListener(() => {
       textColor: "#ffffff",
       position: "bottom",
     },
-    translationProvider: "libre",
+    translationProvider: "google",
   });
 });
 
@@ -350,5 +207,13 @@ chrome.contextMenus.create({
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "toggleSubtitleTranslator") {
     chrome.tabs.sendMessage(tab.id, { action: "toggle" });
+  }
+});
+
+chrome.alarms.create("keepAlive", { periodInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "keepAlive") {
+    // 워커를 깨우기만 하면 됨
+    // console.log('Service worker keep-alive ping');
   }
 });

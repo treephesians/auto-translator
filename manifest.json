@@ -3,7 +3,13 @@
   "name": "실시간 자막 번역기",
   "version": "1.0",
   "description": "영어 자막을 실시간으로 한국어로 번역하여 표시합니다.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "alarms"
+  ],
   "host_permissions": ["https://*/*", "http://*/*"],
   "content_scripts": [
     {

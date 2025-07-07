@@ -101,9 +101,6 @@ class SubtitleTranslator {
     });
 
     this.observers.set("main", observer);
-
-    // 주기적으로 놓친 자막 확인 (백업 메커니즘)
-    this.startPeriodicCheck();
   }
 
   // 요소가 자막인지 빠르게 확인
@@ -145,33 +142,6 @@ class SubtitleTranslator {
     });
   }
 
-  // 백업 메커니즘: 주기적 확인 (놓친 변화 대비)
-  startPeriodicCheck() {
-    setInterval(() => {
-      this.quickSubtitleCheck();
-    }, 1000); // 2초마다 빠른 체크
-  }
-
-  quickSubtitleCheck() {
-    // 가장 일반적인 자막 클래스만 빠르게 확인
-    const commonSelectors = [
-      ".captions-display--captions-cue-text--TQ0DQ", // Udemy
-      ".ytp-caption-segment", // YouTube
-      ".player-timedtext", // Netflix
-      ".vp-captions-text", // Vimeo
-    ];
-
-    commonSelectors.forEach((selector) => {
-      const elements = document.querySelectorAll(selector);
-      elements.forEach((element) => {
-        const text = this.extractTextContent(element);
-        if (text && text !== this.translatedElements.get(element)) {
-          this.processSubtitleElement(element);
-        }
-      });
-    });
-  }
-
   checkExistingSubtitles() {
     this.subtitleSelectors.forEach((selector) => {
       const elements = document.querySelectorAll(selector);
@@ -185,6 +155,7 @@ class SubtitleTranslator {
     if (!this.isEnabled || !element) return;
 
     const text = this.extractTextContent(element);
+    console.log(text);
     if (!text || text.length < 2) return;
 
     // 중복 처리 방지
@@ -203,22 +174,7 @@ class SubtitleTranslator {
   }
 
   extractTextContent(element) {
-    let text = "";
-
-    // 텍스트 노드만 추출
-    const walker = document.createTreeWalker(
-      element,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
-
-    let node;
-    while ((node = walker.nextNode())) {
-      text += node.textContent;
-    }
-
-    return text.trim();
+    return element.textContent?.trim() || "";
   }
 
   async translateAndInsert(element, text) {
@@ -226,7 +182,7 @@ class SubtitleTranslator {
       // 번역 요청
       const translatedText = await this.requestTranslation(text);
 
-      if (translatedText && translatedText !== text) {
+      if (translatedText) {
         this.insertTranslatedSubtitle(element, translatedText);
         this.translatedElements.set(element, text);
       }
@@ -251,24 +207,22 @@ class SubtitleTranslator {
   }
 
   insertTranslatedSubtitle(originalElement, translatedText) {
-    // 기존 번역 제거
-    const existingTranslation = originalElement.querySelector(
+    // 기존 번역 div 찾기
+    let translatedElement = originalElement.querySelector(
       ".translated-subtitle"
     );
-    if (existingTranslation) {
-      existingTranslation.remove();
+    if (translatedElement) {
+      // 이미 있으면 텍스트만 갱신
+      translatedElement.textContent = translatedText;
+      this.applyTranslatedSubtitleStyle(translatedElement);
+    } else {
+      // 없으면 새로 생성
+      translatedElement = document.createElement("div");
+      translatedElement.className = "translated-subtitle";
+      translatedElement.textContent = translatedText;
+      this.applyTranslatedSubtitleStyle(translatedElement);
+      this.insertTranslatedElement(originalElement, translatedElement);
     }
-
-    // 새로운 번역 자막 생성
-    const translatedElement = document.createElement("div");
-    translatedElement.className = "translated-subtitle";
-    translatedElement.textContent = translatedText;
-
-    // 스타일 적용
-    this.applyTranslatedSubtitleStyle(translatedElement);
-
-    // 삽입 위치 결정
-    this.insertTranslatedElement(originalElement, translatedElement);
   }
 
   applyTranslatedSubtitleStyle(element) {
