@@ -1,0 +1,209 @@
+/* 번역된 자막 스타일 */
+.translated-subtitle {
+  position: relative !important;
+  display: block !important;
+  max-width: 100% !important;
+  margin: 4px auto !important;
+  padding: 6px 12px !important;
+
+  /* 폰트 설정 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Noto Sans KR", "Malgun Gothic", sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+
+  /* 색상 및 배경 */
+  color: #ffffff !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 6px !important;
+
+  /* 텍스트 설정 */
+  text-align: center !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+
+  /* 레이아웃 */
+  box-sizing: border-box !important;
+  z-index: 2147483647 !important;
+
+  /* 애니메이션 */
+  opacity: 0 !important;
+  transform: translateY(10px) !important;
+  transition: opacity 0.3s ease, transform 0.3s ease !important;
+
+  /* 스크롤 방지 */
+  pointer-events: none !important;
+}
+
+/* 번역 자막 표시 애니메이션 */
+.translated-subtitle.show {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* 플랫폼별 특별 스타일 */
+
+/* YouTube 특화 스타일 */
+.ytp-caption-window-container .translated-subtitle {
+  margin-top: 8px !important;
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  font-size: 14px !important;
+}
+
+.ytp-caption-segment + .translated-subtitle {
+  margin-top: 4px !important;
+}
+
+/* Netflix 특화 스타일 */
+.player-timedtext + .translated-subtitle {
+  background-color: rgba(0, 0, 0, 0.95) !important;
+  font-size: 15px !important;
+  border-radius: 4px !important;
+}
+
+/* Vimeo 특화 스타일 */
+.vp-captions + .translated-subtitle {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  font-size: 14px !important;
+  padding: 4px 8px !important;
+}
+
+/* 다크 모드 대응 */
+@media (prefers-color-scheme: dark) {
+  .translated-subtitle {
+    background-color: rgba(40, 40, 40, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  }
+}
+
+/* 고대비 모드 대응 */
+@media (prefers-contrast: high) {
+  .translated-subtitle {
+    background-color: rgba(0, 0, 0, 0.95) !important;
+    border: 2px solid rgba(255, 255, 255, 0.8) !important;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 1) !important;
+  }
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .translated-subtitle {
+    font-size: 14px !important;
+    padding: 4px 8px !important;
+    margin: 2px auto !important;
+  }
+}
+
+/* 큰 화면 대응 */
+@media (min-width: 1200px) {
+  .translated-subtitle {
+    font-size: 18px !important;
+    padding: 8px 16px !important;
+  }
+}
+
+/* 자막 컨테이너 스타일 */
+.subtitle-container {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+/* 로딩 상태 표시 */
+.translated-subtitle.loading {
+  opacity: 0.7 !important;
+  position: relative !important;
+}
+
+.translated-subtitle.loading::after {
+  content: "번역 중..." !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  font-size: 10px !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  animation: pulse 1.5s infinite !important;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 오류 상태 표시 */
+.translated-subtitle.error {
+  background-color: rgba(220, 53, 69, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+/* 번역 소스 표시 */
+.translated-subtitle::before {
+  content: attr(data-source) !important;
+  position: absolute !important;
+  top: -2px !important;
+  right: -2px !important;
+  background-color: rgba(40, 167, 69, 0.8) !important;
+  color: white !important;
+  font-size: 8px !important;
+  padding: 1px 4px !important;
+  border-radius: 2px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  opacity: 0.8 !important;
+  pointer-events: none !important;
+}
+
+/* 언어별 폰트 최적화 */
+.translated-subtitle[data-lang="ko"] {
+  font-family: "Noto Sans KR", "Malgun Gothic", "맑은 고딕",
+    "Apple SD Gothic Neo", sans-serif !important;
+}
+
+.translated-subtitle[data-lang="ja"] {
+  font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic",
+    sans-serif !important;
+}
+
+.translated-subtitle[data-lang="zh"] {
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+}
+
+.translated-subtitle[data-lang="ar"] {
+  font-family: "Noto Sans Arabic", "Tahoma", sans-serif !important;
+  direction: rtl !important;
+}
+
+/* 접근성 개선 */
+.translated-subtitle:focus {
+  outline: 2px solid rgba(66, 133, 244, 0.8) !important;
+  outline-offset: 2px !important;
+}
+
+/* 스크린 리더 지원 */
+.translated-subtitle[aria-hidden="true"] {
+  display: none !important;
+}
+
+/* 인쇄 스타일 */
+@media print {
+  .translated-subtitle {
+    color: black !important;
+    background-color: white !important;
+    border: 1px solid black !important;
+    text-shadow: none !important;
+  }
+}

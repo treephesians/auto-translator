@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>자막 번역기 설정</title>
+    <style>
+      body {
+        width: 350px;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background-color: #f5f5f5;
+        margin: 0;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e0e0e0;
+      }
+
+      .header h1 {
+        color: #333;
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .section {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .section h3 {
+        margin: 0 0 10px 0;
+        color: #444;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .control-group {
+        margin-bottom: 15px;
+      }
+
+      .control-group:last-child {
+        margin-bottom: 0;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 12px;
+        color: #666;
+        font-weight: 500;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 12px;
+        box-sizing: border-box;
+      }
+
+      input[type="text"]:focus,
+      input[type="password"]:focus,
+      select:focus {
+        outline: none;
+        border-color: #4285f4;
+        box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+      }
+
+      .toggle-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #4285f4;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .toggle-button:hover {
+        background-color: #3367d6;
+      }
+
+      .toggle-button.disabled {
+        background-color: #dc3545;
+      }
+
+      .toggle-button.disabled:hover {
+        background-color: #c82333;
+      }
+
+      .status {
+        text-align: center;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-bottom: 15px;
+        font-weight: 500;
+      }
+
+      .status.enabled {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status.disabled {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f1b0b7;
+      }
+
+      .color-picker {
+        width: 100%;
+        height: 30px;
+        padding: 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .range-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .range-group input[type="range"] {
+        flex: 1;
+      }
+
+      .range-group .value {
+        font-size: 12px;
+        color: #666;
+        min-width: 30px;
+      }
+
+      .provider-info {
+        font-size: 11px;
+        color: #888;
+        margin-top: 5px;
+        line-height: 1.4;
+      }
+
+      .save-button {
+        width: 100%;
+        padding: 10px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .save-button:hover {
+        background-color: #218838;
+      }
+
+      .clear-button {
+        width: 100%;
+        padding: 8px;
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin-top: 10px;
+      }
+
+      .clear-button:hover {
+        background-color: #5a6268;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🎥 자막 번역기</h1>
+    </div>
+
+    <div class="status" id="statusDisplay">
+      <span id="statusText">상태 확인 중...</span>
+    </div>
+
+    <button class="toggle-button" id="toggleButton">
+      자막 번역기 켜기/끄기
+    </button>
+
+    <div class="section">
+      <h3>기본 설정</h3>
+      <div class="control-group">
+        <label for="targetLanguage">번역 대상 언어:</label>
+        <select id="targetLanguage">
+          <option value="ko">한국어</option>
+          <option value="ja">일본어</option>
+          <option value="zh">중국어</option>
+          <option value="es">스페인어</option>
+          <option value="fr">프랑스어</option>
+          <option value="de">독일어</option>
+          <option value="ru">러시아어</option>
+          <option value="ar">아랍어</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="translationProvider">번역 서비스:</label>
+        <select id="translationProvider">
+          <option value="libre">LibreTranslate (무료)</option>
+          <option value="google">Google Translate (API 키 필요)</option>
+          <option value="deepl">DeepL (API 키 필요)</option>
+        </select>
+        <div class="provider-info" id="providerInfo">
+          무료 번역 서비스를 사용합니다. 더 정확한 번역을 위해서는 API 키를
+          설정해주세요.
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>자막 스타일</h3>
+      <div class="control-group">
+        <label for="fontSize">글자 크기:</label>
+        <div class="range-group">
+          <input type="range" id="fontSize" min="12" max="24" value="16" />
+          <span class="value" id="fontSizeValue">16px</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="textColor">글자 색상:</label>
+        <input
+          type="color"
+          id="textColor"
+          value="#ffffff"
+          class="color-picker"
+        />
+      </div>
+
+      <div class="control-group">
+        <label for="backgroundColor">배경 색상:</label>
+        <input
+          type="color"
+          id="backgroundColor"
+          value="#000000"
+          class="color-picker"
+        />
+      </div>
+
+      <div class="control-group">
+        <label for="backgroundOpacity">배경 투명도:</label>
+        <div class="range-group">
+          <input
+            type="range"
+            id="backgroundOpacity"
+            min="0"
+            max="100"
+            value="80"
+          />
+          <span class="value" id="backgroundOpacityValue">80%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>API 키 설정</h3>
+      <div class="control-group">
+        <label for="googleApiKey">Google Translate API 키:</label>
+        <input type="password" id="googleApiKey" placeholder="선택사항" />
+      </div>
+
+      <div class="control-group">
+        <label for="deeplApiKey">DeepL API 키:</label>
+        <input type="password" id="deeplApiKey" placeholder="선택사항" />
+      </div>
+    </div>
+
+    <div class="section">
+      <button class="save-button" id="saveButton">설정 저장</button>
+      <button class="clear-button" id="clearCacheButton">
+        번역 캐시 지우기
+      </button>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

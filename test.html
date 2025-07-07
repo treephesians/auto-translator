@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>자막 번역기 테스트 페이지</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .subtitle-test {
+        background: #000;
+        color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .subtitle {
+        font-size: 18px;
+        line-height: 1.5;
+        margin: 10px 0;
+        padding: 8px 12px;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 4px;
+      }
+
+      .caption {
+        font-size: 16px;
+        margin: 15px 0;
+        padding: 6px 10px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 3px;
+      }
+
+      .ytp-caption-segment {
+        font-size: 14px;
+        margin: 8px 0;
+        padding: 4px 8px;
+        background: rgba(0, 0, 0, 0.9);
+        border-radius: 2px;
+      }
+
+      .instructions {
+        background: #e7f3ff;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border-left: 4px solid #007acc;
+      }
+
+      .instructions h3 {
+        margin-top: 0;
+        color: #007acc;
+      }
+
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #007acc;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 5px;
+        cursor: pointer;
+        border: none;
+        font-size: 14px;
+      }
+
+      .button:hover {
+        background: #005a9e;
+      }
+
+      .dynamic-subtitles {
+        min-height: 100px;
+        border: 2px dashed #ccc;
+        padding: 20px;
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎥 자막 번역기 테스트 페이지</h1>
+
+      <div class="instructions">
+        <h3>📋 테스트 방법</h3>
+        <ol>
+          <li>Chrome 확장 프로그램을 로드합니다</li>
+          <li>확장 프로그램 아이콘을 클릭하여 자막 번역기를 활성화합니다</li>
+          <li>아래 버튼을 클릭하여 다양한 자막 형식을 테스트해보세요</li>
+          <li>영어 자막 아래에 한국어 번역이 나타나는지 확인하세요</li>
+        </ol>
+      </div>
+
+      <div class="subtitle-test">
+        <h3>정적 자막 테스트</h3>
+        <div class="subtitle">Hello, welcome to our English tutorial!</div>
+        <div class="caption">
+          This is a sample subtitle for testing purposes.
+        </div>
+        <div class="ytp-caption-segment">
+          Let's see if the translation works correctly.
+        </div>
+      </div>
+
+      <div>
+        <h3>동적 자막 테스트</h3>
+        <button class="button" onclick="addSubtitle()">자막 추가</button>
+        <button class="button" onclick="changeSubtitle()">자막 변경</button>
+        <button class="button" onclick="clearSubtitles()">자막 지우기</button>
+
+        <div class="dynamic-subtitles" id="dynamicSubtitles">
+          <p>여기에 동적 자막이 나타납니다</p>
+        </div>
+      </div>
+
+      <div class="subtitle-test">
+        <h3>다양한 클래스 테스트</h3>
+        <div class="subtitles">How are you doing today?</div>
+        <div class="captions">I hope you're having a great day!</div>
+        <div class="player-timedtext">
+          This extension helps you learn languages.
+        </div>
+        <div class="timedtext-text-container">
+          Technology makes learning so much easier.
+        </div>
+        <div class="vp-captions">Thank you for testing our extension!</div>
+      </div>
+
+      <div id="statusArea"></div>
+    </div>
+
+    <script>
+      let subtitleCounter = 0;
+
+      const sampleSubtitles = [
+        "Welcome to our online course!",
+        "Today we will learn about web development.",
+        "JavaScript is a powerful programming language.",
+        "HTML provides the structure for web pages.",
+        "CSS makes websites look beautiful.",
+        "Let's start with some basic examples.",
+        "Don't forget to practice regularly!",
+        "Questions are welcome in the comments.",
+      ];
+
+      function addSubtitle() {
+        const container = document.getElementById("dynamicSubtitles");
+        const subtitle = document.createElement("div");
+        subtitle.className = "subtitle";
+        subtitle.textContent =
+          sampleSubtitles[subtitleCounter % sampleSubtitles.length];
+        subtitle.id = "dynamic-subtitle-" + subtitleCounter;
+
+        container.appendChild(subtitle);
+        subtitleCounter++;
+
+        showStatus("새로운 자막이 추가되었습니다!", "success");
+      }
+
+      function changeSubtitle() {
+        const subtitles = document.querySelectorAll(
+          "#dynamicSubtitles .subtitle"
+        );
+        if (subtitles.length > 0) {
+          const randomIndex = Math.floor(Math.random() * subtitles.length);
+          const randomSubtitle = subtitles[randomIndex];
+          const newText =
+            sampleSubtitles[Math.floor(Math.random() * sampleSubtitles.length)];
+          randomSubtitle.textContent = newText;
+
+          showStatus("자막이 변경되었습니다!", "success");
+        } else {
+          showStatus(
+            "변경할 자막이 없습니다. 먼저 자막을 추가해주세요.",
+            "error"
+          );
+        }
+      }
+
+      function clearSubtitles() {
+        const container = document.getElementById("dynamicSubtitles");
+        const subtitles = container.querySelectorAll(".subtitle");
+        subtitles.forEach((subtitle) => subtitle.remove());
+
+        container.innerHTML = "<p>여기에 동적 자막이 나타납니다</p>";
+        subtitleCounter = 0;
+
+        showStatus("모든 자막이 지워졌습니다!", "success");
+      }
+
+      function showStatus(message, type) {
+        const statusArea = document.getElementById("statusArea");
+        const status = document.createElement("div");
+        status.className = "status " + type;
+        status.textContent = message;
+
+        statusArea.appendChild(status);
+
+        setTimeout(() => {
+          status.remove();
+        }, 3000);
+      }
+
+      // 자동 자막 변경 (선택사항)
+      function startAutoSubtitles() {
+        setInterval(() => {
+          const subtitles = document.querySelectorAll(
+            "#dynamicSubtitles .subtitle"
+          );
+          if (subtitles.length > 0) {
+            changeSubtitle();
+          }
+        }, 5000);
+      }
+
+      // 페이지 로드 시 초기 자막 추가
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          addSubtitle();
+        }, 1000);
+      });
+
+      // 확장 프로그램 상태 확인
+      function checkExtensionStatus() {
+        if (
+          typeof chrome !== "undefined" &&
+          chrome.runtime &&
+          chrome.runtime.id
+        ) {
+          showStatus("확장 프로그램이 감지되었습니다!", "success");
+        } else {
+          showStatus("확장 프로그램을 로드해주세요.", "error");
+        }
+      }
+
+      // 주기적으로 상태 확인
+      setInterval(checkExtensionStatus, 10000);
+    </script>
+  </body>
+</html>
