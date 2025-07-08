@@ -6,7 +6,7 @@
     <title>자막 번역기 설정</title>
     <style>
       body {
-        width: 350px;
+        width: 280px;
         padding: 20px;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           sans-serif;
@@ -36,48 +36,6 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
-      .section h3 {
-        margin: 0 0 10px 0;
-        color: #444;
-        font-size: 14px;
-        font-weight: 600;
-      }
-
-      .control-group {
-        margin-bottom: 15px;
-      }
-
-      .control-group:last-child {
-        margin-bottom: 0;
-      }
-
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-size: 12px;
-        color: #666;
-        font-weight: 500;
-      }
-
-      input[type="text"],
-      input[type="password"],
-      select {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 12px;
-        box-sizing: border-box;
-      }
-
-      input[type="text"]:focus,
-      input[type="password"]:focus,
-      select:focus {
-        outline: none;
-        border-color: #4285f4;
-        box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
-      }
-
       .toggle-button {
         width: 100%;
         padding: 12px;
@@ -89,6 +47,7 @@
         font-weight: 600;
         cursor: pointer;
         transition: background-color 0.3s;
+        margin-bottom: 15px;
       }
 
       .toggle-button:hover {
@@ -124,53 +83,49 @@
         border: 1px solid #f1b0b7;
       }
 
-      .color-picker {
-        width: 100%;
-        height: 30px;
-        padding: 0;
-        border: 1px solid #ddd;
+      .server-info {
+        background-color: #e8f5e8;
+        border: 1px solid #4caf50;
         border-radius: 4px;
-        cursor: pointer;
-      }
-
-      .range-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .range-group input[type="range"] {
-        flex: 1;
-      }
-
-      .range-group .value {
-        font-size: 12px;
-        color: #666;
-        min-width: 30px;
-      }
-
-      .provider-info {
+        padding: 12px;
         font-size: 11px;
-        color: #888;
-        margin-top: 5px;
+        color: #2e7d32;
         line-height: 1.4;
+        text-align: center;
       }
 
-      .save-button {
+      .server-info strong {
+        color: #1b5e20;
+        display: block;
+        margin-bottom: 8px;
+        font-size: 12px;
+      }
+
+      .server-status {
+        margin: 10px 0;
+        padding: 6px 8px;
+        background-color: #ffffff;
+        border-radius: 3px;
+        border: 1px solid #81c784;
+        font-size: 10px;
+        font-family: monospace;
+      }
+
+      .test-button {
         width: 100%;
-        padding: 10px;
-        background-color: #28a745;
+        padding: 8px;
+        background-color: #17a2b8;
         color: white;
         border: none;
         border-radius: 4px;
-        font-size: 13px;
-        font-weight: 600;
+        font-size: 12px;
         cursor: pointer;
         transition: background-color 0.3s;
+        margin-top: 8px;
       }
 
-      .save-button:hover {
-        background-color: #218838;
+      .test-button:hover {
+        background-color: #138496;
       }
 
       .clear-button {
@@ -183,26 +138,10 @@
         font-size: 12px;
         cursor: pointer;
         transition: background-color 0.3s;
-        margin-top: 10px;
       }
 
       .clear-button:hover {
         background-color: #5a6268;
-      }
-
-      .api-info {
-        background-color: #e3f2fd;
-        border: 1px solid #90caf9;
-        border-radius: 4px;
-        padding: 10px;
-        margin-top: 10px;
-        font-size: 11px;
-        color: #1565c0;
-        line-height: 1.4;
-      }
-
-      .api-info strong {
-        color: #0d47a1;
       }
     </style>
   </head>
@@ -218,92 +157,17 @@
     <button id="toggleButton" class="toggle-button">자막 번역기 켜기</button>
 
     <div class="section">
-      <h3>📋 번역 설정</h3>
+      <div class="server-info">
+        <strong>🖥️ 로컬 LibreTranslate 서버</strong>
+        완전 무료 · 빠른 번역 · 개인정보 보호
 
-      <div class="control-group">
-        <label for="targetLanguage">번역 대상 언어</label>
-        <select id="targetLanguage">
-          <option value="ko">한국어 (Korean)</option>
-          <option value="ja">일본어 (Japanese)</option>
-          <option value="zh">중국어 (Chinese)</option>
-          <option value="es">스페인어 (Spanish)</option>
-          <option value="fr">프랑스어 (French)</option>
-          <option value="de">독일어 (German)</option>
-          <option value="it">이탈리아어 (Italian)</option>
-          <option value="pt">포르투갈어 (Portuguese)</option>
-          <option value="ru">러시아어 (Russian)</option>
-          <option value="ar">아랍어 (Arabic)</option>
-        </select>
+        <div class="server-status">http://localhost:5001</div>
+
+        <button id="testServerButton" class="test-button">
+          서버 연결 테스트
+        </button>
+        <button id="clearCacheButton" class="clear-button">캐시 지우기</button>
       </div>
-
-      <div class="api-info">
-        <strong>로컬 LibreTranslate 서버</strong><br />
-        • 완전 무료 (사용량 제한 없음)<br />
-        • 로컬 서버로 빠른 번역 제공<br />
-        • 오프라인 작동 및 개인정보 보호<br />
-        • 서버: localhost:5001
-      </div>
-    </div>
-
-    <div class="section">
-      <h3>🎨 자막 스타일</h3>
-
-      <div class="control-group">
-        <label for="fontSize">글자 크기</label>
-        <div class="range-group">
-          <input
-            type="range"
-            id="fontSize"
-            min="12"
-            max="24"
-            value="16"
-            step="1"
-          />
-          <span class="value" id="fontSizeValue">16px</span>
-        </div>
-      </div>
-
-      <div class="control-group">
-        <label for="textColor">글자 색상</label>
-        <input
-          type="color"
-          id="textColor"
-          class="color-picker"
-          value="#ffffff"
-        />
-      </div>
-
-      <div class="control-group">
-        <label for="backgroundColor">배경 색상</label>
-        <input
-          type="color"
-          id="backgroundColor"
-          class="color-picker"
-          value="#000000"
-        />
-      </div>
-
-      <div class="control-group">
-        <label for="backgroundOpacity">배경 투명도</label>
-        <div class="range-group">
-          <input
-            type="range"
-            id="backgroundOpacity"
-            min="0"
-            max="100"
-            value="80"
-            step="5"
-          />
-          <span class="value" id="backgroundOpacityValue">80%</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h3>⚙️ 기타 설정</h3>
-
-      <button id="saveButton" class="save-button">설정 저장</button>
-      <button id="clearCacheButton" class="clear-button">캐시 지우기</button>
     </div>
 
     <script src="popup.js"></script>

@@ -2,15 +2,6 @@
 class PopupManager {
   constructor() {
     this.isEnabled = true;
-    this.settings = {
-      targetLanguage: "ko",
-      fontSize: "16px",
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      textColor: "#ffffff",
-      position: "bottom",
-    };
-    this.translationProvider = "mymemory";
-
     this.init();
   }
 
@@ -22,22 +13,13 @@ class PopupManager {
 
   async loadSettings() {
     try {
-      const result = await chrome.storage.sync.get([
-        "subtitleSettings",
-        "translationProvider",
-        "isEnabled",
-      ]);
-
-      if (result.subtitleSettings) {
-        this.settings = { ...this.settings, ...result.subtitleSettings };
-      }
-
-      if (result.translationProvider) {
-        this.translationProvider = result.translationProvider;
-      }
+      const result = await chrome.storage.sync.get(["isEnabled"]);
 
       if (result.isEnabled !== undefined) {
         this.isEnabled = result.isEnabled;
+        console.log(
+          `[Popup] 저장된 상태 로드: ${this.isEnabled ? "활성화" : "비활성화"}`
+        );
       }
     } catch (error) {
       console.error("설정 로드 실패:", error);
@@ -50,11 +32,6 @@ class PopupManager {
       this.toggleTranslator();
     });
 
-    // 설정 저장 버튼
-    document.getElementById("saveButton").addEventListener("click", () => {
-      this.saveSettings();
-    });
-
     // 캐시 지우기 버튼
     document
       .getElementById("clearCacheButton")
@@ -62,69 +39,17 @@ class PopupManager {
         this.clearCache();
       });
 
-    // 글자 크기 슬라이더
-    const fontSizeSlider = document.getElementById("fontSize");
-    const fontSizeValue = document.getElementById("fontSizeValue");
-
-    fontSizeSlider.addEventListener("input", (e) => {
-      const value = e.target.value;
-      fontSizeValue.textContent = value + "px";
-      this.settings.fontSize = value + "px";
-    });
-
-    // 투명도 슬라이더
-    const opacitySlider = document.getElementById("backgroundOpacity");
-    const opacityValue = document.getElementById("backgroundOpacityValue");
-
-    opacitySlider.addEventListener("input", (e) => {
-      const value = e.target.value;
-      opacityValue.textContent = value + "%";
-      this.updateBackgroundColor();
-    });
-
-    // 색상 변경
-    document.getElementById("textColor").addEventListener("change", (e) => {
-      this.settings.textColor = e.target.value;
-    });
-
+    // 서버 테스트 버튼
     document
-      .getElementById("backgroundColor")
-      .addEventListener("change", (e) => {
-        this.updateBackgroundColor();
-      });
-
-    // 대상 언어 변경
-    document
-      .getElementById("targetLanguage")
-      .addEventListener("change", (e) => {
-        this.settings.targetLanguage = e.target.value;
+      .getElementById("testServerButton")
+      .addEventListener("click", () => {
+        this.testLibreTranslateServer();
       });
   }
 
   updateUI() {
     // 상태 표시 업데이트
     this.updateStatus();
-
-    // 설정 값들을 UI에 반영
-    document.getElementById("targetLanguage").value =
-      this.settings.targetLanguage;
-
-    // 글자 크기
-    const fontSizeNum = parseInt(this.settings.fontSize);
-    document.getElementById("fontSize").value = fontSizeNum;
-    document.getElementById("fontSizeValue").textContent = fontSizeNum + "px";
-
-    // 색상
-    document.getElementById("textColor").value = this.settings.textColor;
-
-    // 배경 색상과 투명도 분리
-    const bgColor = this.extractBackgroundColor();
-    const opacity = this.extractBackgroundOpacity();
-
-    document.getElementById("backgroundColor").value = bgColor;
-    document.getElementById("backgroundOpacity").value = opacity;
-    document.getElementById("backgroundOpacityValue").textContent =
-      opacity + "%";
   }
 
   updateStatus() {
@@ -143,46 +68,6 @@ class PopupManager {
       toggleButton.textContent = "자막 번역기 켜기";
       toggleButton.classList.add("disabled");
     }
-  }
-
-  extractBackgroundColor() {
-    // rgba(0, 0, 0, 0.8) 형태에서 색상 추출
-    const match = this.settings.backgroundColor.match(
-      /rgba?\((\d+),\s*(\d+),\s*(\d+)/
-    );
-    if (match) {
-      const r = parseInt(match[1]).toString(16).padStart(2, "0");
-      const g = parseInt(match[2]).toString(16).padStart(2, "0");
-      const b = parseInt(match[3]).toString(16).padStart(2, "0");
-      return `#${r}${g}${b}`;
-    }
-    return "#000000";
-  }
-
-  extractBackgroundOpacity() {
-    // rgba(0, 0, 0, 0.8) 형태에서 투명도 추출
-    const match = this.settings.backgroundColor.match(
-      /rgba?\([^,]+,[^,]+,[^,]+,?\s*([^)]+)\)/
-    );
-    if (match) {
-      return Math.round(parseFloat(match[1]) * 100);
-    }
-    return 80;
-  }
-
-  updateBackgroundColor() {
-    const colorPicker = document.getElementById("backgroundColor");
-    const opacitySlider = document.getElementById("backgroundOpacity");
-
-    const color = colorPicker.value;
-    const opacity = opacitySlider.value / 100;
-
-    // hex를 rgb로 변환
-    const r = parseInt(color.substr(1, 2), 16);
-    const g = parseInt(color.substr(3, 2), 16);
-    const b = parseInt(color.substr(5, 2), 16);
-
-    this.settings.backgroundColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
   }
 
   async toggleTranslator() {
@@ -210,23 +95,6 @@ class PopupManager {
     }
   }
 
-  async saveSettings() {
-    this.updateBackgroundColor();
-
-    try {
-      await chrome.storage.sync.set({
-        subtitleSettings: this.settings,
-        translationProvider: this.translationProvider,
-        isEnabled: this.isEnabled,
-      });
-
-      this.showNotification("설정이 저장되었습니다.", "success");
-    } catch (error) {
-      console.error("설정 저장 실패:", error);
-      this.showNotification("설정 저장에 실패했습니다.", "error");
-    }
-  }
-
   async clearCache() {
     try {
       await chrome.storage.local.clear();
@@ -234,6 +102,33 @@ class PopupManager {
     } catch (error) {
       console.error("캐시 지우기 실패:", error);
       this.showNotification("캐시 지우기에 실패했습니다.", "error");
+    }
+  }
+
+  async testLibreTranslateServer() {
+    try {
+      this.showNotification("LibreTranslate 서버 연결 확인 중...", "info");
+
+      // 직접 서버에 요청
+      const response = await fetch("http://localhost:5001/languages");
+
+      if (response.ok) {
+        const languages = await response.json();
+        this.showNotification(
+          `서버 연결 성공! 지원 언어: ${languages.length}개`,
+          "success"
+        );
+      } else {
+        this.showNotification(
+          `서버 연결 실패: HTTP ${response.status}`,
+          "error"
+        );
+      }
+    } catch (error) {
+      this.showNotification(
+        `서버 연결 실패: ${error.message}. Docker에서 LibreTranslate 서버가 실행 중인지 확인하세요.`,
+        "error"
+      );
     }
   }
 
@@ -278,29 +173,6 @@ class PopupManager {
         }
       }, 300);
     }, 3000);
-  }
-
-  async testTranslator() {
-    try {
-      this.showNotification("번역 테스트 중...", "info");
-
-      const response = await chrome.runtime.sendMessage({
-        action: "translate",
-        text: "Hello, this is a test!",
-        targetLanguage: this.settings.targetLanguage,
-      });
-
-      if (response.error) {
-        this.showNotification(`번역 테스트 실패: ${response.error}`, "error");
-      } else {
-        this.showNotification(
-          `번역 테스트 성공: ${response.translatedText}`,
-          "success"
-        );
-      }
-    } catch (error) {
-      this.showNotification(`번역 테스트 중 오류: ${error.message}`, "error");
-    }
   }
 }
 

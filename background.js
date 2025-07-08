@@ -18,8 +18,47 @@ class TranslationService {
       if (request.action === "translate") {
         this.handleTranslationRequest(request, sendResponse);
         return true; // 비동기 응답을 위해 true 반환
+      } else if (request.action === "toggleEnabled") {
+        this.handleToggleEnabled(request, sender);
+        sendResponse({ success: true });
       }
     });
+  }
+
+  async handleToggleEnabled(request, sender) {
+    try {
+      // 현재 탭에 토글 메시지 전송
+      if (sender.tab) {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: "toggle",
+          enabled: request.enabled,
+        });
+      } else {
+        // popup에서 호출된 경우, 현재 활성 탭을 찾아서 전송
+        const [activeTab] = await chrome.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
+
+        if (activeTab) {
+          chrome.tabs
+            .sendMessage(activeTab.id, {
+              action: "toggle",
+              enabled: request.enabled,
+            })
+            .catch(() => {
+              // Content script가 로드되지 않은 경우 무시
+              console.log("Content script not loaded in current tab");
+            });
+        }
+      }
+
+      console.log(
+        `[Background] 번역기 토글: ${request.enabled ? "활성화" : "비활성화"}`
+      );
+    } catch (error) {
+      console.error("토글 메시지 전송 실패:", error);
+    }
   }
 
   async handleTranslationRequest(request, sendResponse) {
@@ -179,6 +218,9 @@ new TranslationService();
 chrome.runtime.onInstalled.addListener(() => {
   console.log("자막 번역기 확장자가 설치되었습니다.");
 
+  // 컨텍스트 메뉴 설정
+  setupContextMenu();
+
   // MyMemory API 테스트 실행
   setTimeout(() => {
     // translationService.testMyMemoryAPI(); // 이 부분은 로컬 서버로 변경되었으므로 제거
@@ -188,7 +230,22 @@ chrome.runtime.onInstalled.addListener(() => {
 // 확장자 시작 시에도 테스트 (개발 중 디버깅용)
 chrome.runtime.onStartup.addListener(() => {
   console.log("자막 번역기 확장자가 시작되었습니다.");
+  // 시작 시에도 컨텍스트 메뉴 설정
+  setupContextMenu();
 });
+
+// 컨텍스트 메뉴 설정 함수
+function setupContextMenu() {
+  // 기존 컨텍스트 메뉴 모두 제거
+  chrome.contextMenus.removeAll(() => {
+    // 새로운 컨텍스트 메뉴 생성
+    chrome.contextMenus.create({
+      id: "toggleSubtitleTranslator",
+      title: "자막 번역기 켜기/끄기",
+      contexts: ["all"],
+    });
+  });
+}
 
 // 페이지 로드 완료 시 content script에 초기화 신호 전송
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -201,13 +258,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       // Content script가 아직 로드되지 않았을 수 있음 - 무시
     });
   }
-});
-
-// 컨텍스트 메뉴 추가
-chrome.contextMenus.create({
-  id: "toggleSubtitleTranslator",
-  title: "자막 번역기 켜기/끄기",
-  contexts: ["all"],
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
