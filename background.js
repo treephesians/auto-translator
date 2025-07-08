@@ -1,21 +1,16 @@
-// 자막 번역기 Background Script
+// 자막 번역기 Background Script - 로컬 LibreTranslate 사용
 class TranslationService {
   constructor() {
-    this.googleApiKey = "AIzaSyAMJXGdaeIqi9YGg0gna76ZjSwBYRrw-kY"; // Google Translate API 키를 직접 입력
-    this.translationProvider = "google";
+    this.libreTranslateBaseUrl = "http://localhost:5001";
+    this.translationProvider = "libretranslate-local";
     this.requestQueue = [];
     this.isProcessing = false;
-    this.rateLimiter = {
-      requests: 0,
-      resetTime: Date.now() + 60000, // 1분마다 리셋
-    };
-
+    // 로컬 서버는 요청 제한이 없으므로 제거
     this.init();
   }
 
   init() {
     this.setupMessageListener();
-    this.setupRateLimiter();
   }
 
   setupMessageListener() {
@@ -25,13 +20,6 @@ class TranslationService {
         return true; // 비동기 응답을 위해 true 반환
       }
     });
-  }
-
-  setupRateLimiter() {
-    setInterval(() => {
-      this.rateLimiter.requests = 0;
-      this.rateLimiter.resetTime = Date.now() + 60000;
-    }, 60000);
   }
 
   async handleTranslationRequest(request, sendResponse) {
@@ -62,7 +50,7 @@ class TranslationService {
       const request = this.requestQueue.shift();
       await this.processTranslationRequest(request);
 
-      // 요청 간격 제한
+      // 로컬 서버이므로 간격을 짧게 설정
       await this.sleep(100);
     }
 
@@ -71,12 +59,6 @@ class TranslationService {
 
   async processTranslationRequest({ text, targetLanguage, sendResponse }) {
     try {
-      // 요청 제한 확인
-      if (this.rateLimiter.requests >= 100) {
-        sendResponse({ error: "요청 제한 초과. 잠시 후 다시 시도해주세요." });
-        return;
-      }
-
       // targetLanguage가 2글자 ISO 639-1 코드인지 검증
       if (
         !targetLanguage ||
@@ -93,17 +75,10 @@ class TranslationService {
         return;
       }
 
-      this.rateLimiter.requests++;
-
-      // 요청 body를 명확하게 구성
-      const body = {
-        q: text,
-        target: targetLanguage,
-        source: "auto",
-      };
-      console.log("[Google Translate 요청] body:", body);
-
-      let translatedText = await this.translateWithGoogle(body);
+      let translatedText = await this.translateWithLibreTranslate(
+        text,
+        targetLanguage
+      );
 
       if (translatedText) {
         sendResponse({ translatedText });
@@ -116,31 +91,44 @@ class TranslationService {
     }
   }
 
-  async translateWithGoogle(body) {
-    if (!this.googleApiKey) {
-      console.warn("Google Translate API 키가 설정되지 않았습니다.");
-      return null;
-    }
-
+  async translateWithLibreTranslate(text, targetLanguage) {
     try {
-      const url = `https://translation.googleapis.com/language/translate/v2?key=${this.googleApiKey}`;
+      const url = `${this.libreTranslateBaseUrl}/translate`;
+
+      const requestBody = {
+        q: text,
+        source: "en",
+        target: targetLanguage,
+      };
+
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(requestBody),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `[LibreTranslate 오류] HTTP ${response.status}: ${errorText}`
+        );
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const data = await response.json();
 
-      if (data.error) {
-        throw new Error(data.error.message);
+      if (data.translatedText) {
+        const translatedText = data.translatedText;
+        console.log(`번역: ${translatedText}`);
+        return translatedText;
+      } else {
+        console.error(`[LibreTranslate 오류] 번역 결과가 없습니다:`, data);
+        return null;
       }
-
-      return data.data.translations[0].translatedText;
     } catch (error) {
-      console.error("Google Translate 오류:", error);
+      console.error(`[LibreTranslate 실패]`, error.message);
       return null;
     }
   }
@@ -148,52 +136,70 @@ class TranslationService {
   sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+
+  // 테스트용 함수 - 로컬 LibreTranslate API 테스트
+  async testLibreTranslateAPI() {
+    try {
+      console.log("[API 테스트] 로컬 LibreTranslate 테스트 시작");
+
+      const testBody = {
+        q: "Hello world!",
+        source: "en",
+        target: "ko",
+      };
+
+      const response = await fetch(`${this.libreTranslateBaseUrl}/translate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(testBody),
+      });
+
+      console.log("[API 테스트] 응답 상태:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[API 테스트] 오류 응답:", errorText);
+        return;
+      }
+
+      const data = await response.json();
+      console.log("[API 테스트] 성공 응답:", data);
+    } catch (error) {
+      console.error("[API 테스트] 예외 발생:", error);
+    }
+  }
 }
 
-// 전역 인스턴스 생성
-const translationService = new TranslationService();
+// 서비스 초기화
+new TranslationService();
 
 // 확장자 설치 시 초기화
 chrome.runtime.onInstalled.addListener(() => {
   console.log("자막 번역기 확장자가 설치되었습니다.");
 
-  // 기본 설정 저장
-  chrome.storage.sync.set({
-    subtitleSettings: {
-      targetLanguage: "ko",
-      fontSize: "16px",
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
-      textColor: "#ffffff",
-      position: "bottom",
-    },
-    translationProvider: "google",
-  });
+  // MyMemory API 테스트 실행
+  setTimeout(() => {
+    // translationService.testMyMemoryAPI(); // 이 부분은 로컬 서버로 변경되었으므로 제거
+  }, 1000);
 });
 
-// 확장자 시작 시 초기화
+// 확장자 시작 시에도 테스트 (개발 중 디버깅용)
 chrome.runtime.onStartup.addListener(() => {
   console.log("자막 번역기 확장자가 시작되었습니다.");
 });
 
-// 탭 업데이트 시 처리
+// 페이지 로드 완료 시 content script에 초기화 신호 전송
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === "complete" && tab.url) {
-    // 비디오 사이트인지 확인
-    const videoSites = [
-      "youtube.com",
-      "netflix.com",
-      "vimeo.com",
-      "coursera.org",
-      "udemy.com",
-      "edx.org",
-    ];
-
-    const isVideoSite = videoSites.some((site) => tab.url.includes(site));
-
-    if (isVideoSite) {
-      // 알림 또는 추가 처리
-      console.log("비디오 사이트에 접속했습니다:", tab.url);
-    }
+  if (
+    changeInfo.status === "complete" &&
+    tab.url &&
+    (tab.url.includes("youtube.com") || tab.url.includes("netflix.com"))
+  ) {
+    chrome.tabs.sendMessage(tabId, { action: "init" }).catch(() => {
+      // Content script가 아직 로드되지 않았을 수 있음 - 무시
+    });
   }
 });
 

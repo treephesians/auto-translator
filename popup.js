@@ -9,11 +9,7 @@ class PopupManager {
       textColor: "#ffffff",
       position: "bottom",
     };
-    this.apiKeys = {
-      google: "",
-      deepl: "",
-    };
-    this.translationProvider = "libre";
+    this.translationProvider = "mymemory";
 
     this.init();
   }
@@ -28,17 +24,12 @@ class PopupManager {
     try {
       const result = await chrome.storage.sync.get([
         "subtitleSettings",
-        "apiKeys",
         "translationProvider",
         "isEnabled",
       ]);
 
       if (result.subtitleSettings) {
         this.settings = { ...this.settings, ...result.subtitleSettings };
-      }
-
-      if (result.apiKeys) {
-        this.apiKeys = { ...this.apiKeys, ...result.apiKeys };
       }
 
       if (result.translationProvider) {
@@ -102,29 +93,12 @@ class PopupManager {
         this.updateBackgroundColor();
       });
 
-    // 번역 서비스 변경
-    document
-      .getElementById("translationProvider")
-      .addEventListener("change", (e) => {
-        this.translationProvider = e.target.value;
-        this.updateProviderInfo();
-      });
-
     // 대상 언어 변경
     document
       .getElementById("targetLanguage")
       .addEventListener("change", (e) => {
         this.settings.targetLanguage = e.target.value;
       });
-
-    // API 키 변경
-    document.getElementById("googleApiKey").addEventListener("change", (e) => {
-      this.apiKeys.google = e.target.value;
-    });
-
-    document.getElementById("deeplApiKey").addEventListener("change", (e) => {
-      this.apiKeys.deepl = e.target.value;
-    });
   }
 
   updateUI() {
@@ -134,8 +108,6 @@ class PopupManager {
     // 설정 값들을 UI에 반영
     document.getElementById("targetLanguage").value =
       this.settings.targetLanguage;
-    document.getElementById("translationProvider").value =
-      this.translationProvider;
 
     // 글자 크기
     const fontSizeNum = parseInt(this.settings.fontSize);
@@ -153,13 +125,6 @@ class PopupManager {
     document.getElementById("backgroundOpacity").value = opacity;
     document.getElementById("backgroundOpacityValue").textContent =
       opacity + "%";
-
-    // API 키
-    document.getElementById("googleApiKey").value = this.apiKeys.google;
-    document.getElementById("deeplApiKey").value = this.apiKeys.deepl;
-
-    // 번역 서비스 정보 업데이트
-    this.updateProviderInfo();
   }
 
   updateStatus() {
@@ -177,25 +142,6 @@ class PopupManager {
       statusText.textContent = "자막 번역기가 비활성화되었습니다.";
       toggleButton.textContent = "자막 번역기 켜기";
       toggleButton.classList.add("disabled");
-    }
-  }
-
-  updateProviderInfo() {
-    const providerInfo = document.getElementById("providerInfo");
-
-    switch (this.translationProvider) {
-      case "libre":
-        providerInfo.textContent =
-          "무료 번역 서비스를 사용합니다. 더 정확한 번역을 위해서는 API 키를 설정해주세요.";
-        break;
-      case "google":
-        providerInfo.textContent =
-          "Google Translate API를 사용합니다. API 키가 필요합니다.";
-        break;
-      case "deepl":
-        providerInfo.textContent =
-          "DeepL API를 사용합니다. 더 정확한 번역을 제공하지만 API 키가 필요합니다.";
-        break;
     }
   }
 
@@ -242,74 +188,39 @@ class PopupManager {
   async toggleTranslator() {
     this.isEnabled = !this.isEnabled;
 
-    // 설정 저장
-    await chrome.storage.sync.set({ isEnabled: this.isEnabled });
-
-    // 모든 탭에 토글 메시지 전송
     try {
-      const tabs = await chrome.tabs.query({});
-      for (const tab of tabs) {
-        try {
-          await chrome.tabs.sendMessage(tab.id, { action: "toggle" });
-        } catch (error) {
-          // 일부 탭에서는 content script가 없을 수 있음
-          console.log("Content script not found in tab:", tab.id);
-        }
-      }
-    } catch (error) {
-      console.error("탭 메시지 전송 실패:", error);
-    }
+      await chrome.storage.sync.set({ isEnabled: this.isEnabled });
+      this.updateStatus();
 
-    this.updateStatus();
+      // 백그라운드 스크립트에 상태 변경 알림
+      chrome.runtime.sendMessage({
+        action: "toggleEnabled",
+        enabled: this.isEnabled,
+      });
+
+      this.showNotification(
+        this.isEnabled
+          ? "자막 번역기가 활성화되었습니다."
+          : "자막 번역기가 비활성화되었습니다.",
+        "success"
+      );
+    } catch (error) {
+      console.error("토글 실패:", error);
+      this.showNotification("설정 변경에 실패했습니다.", "error");
+    }
   }
 
   async saveSettings() {
-    try {
-      // 배경 색상 업데이트
-      this.updateBackgroundColor();
+    this.updateBackgroundColor();
 
-      // 모든 설정 저장
+    try {
       await chrome.storage.sync.set({
         subtitleSettings: this.settings,
-        apiKeys: this.apiKeys,
         translationProvider: this.translationProvider,
         isEnabled: this.isEnabled,
       });
 
-      // Background script에 설정 업데이트 알림
-      try {
-        await chrome.runtime.sendMessage({
-          action: "updateApiKeys",
-          apiKeys: this.apiKeys,
-        });
-
-        await chrome.runtime.sendMessage({
-          action: "updateTranslationProvider",
-          provider: this.translationProvider,
-        });
-      } catch (error) {
-        console.error("Background script 업데이트 실패:", error);
-      }
-
-      // 모든 탭에 설정 업데이트 메시지 전송
-      try {
-        const tabs = await chrome.tabs.query({});
-        for (const tab of tabs) {
-          try {
-            await chrome.tabs.sendMessage(tab.id, {
-              action: "updateSettings",
-              settings: this.settings,
-            });
-          } catch (error) {
-            console.log("Content script not found in tab:", tab.id);
-          }
-        }
-      } catch (error) {
-        console.error("설정 업데이트 메시지 전송 실패:", error);
-      }
-
-      // 성공 알림
-      this.showNotification("설정이 저장되었습니다!", "success");
+      this.showNotification("설정이 저장되었습니다.", "success");
     } catch (error) {
       console.error("설정 저장 실패:", error);
       this.showNotification("설정 저장에 실패했습니다.", "error");
@@ -318,10 +229,8 @@ class PopupManager {
 
   async clearCache() {
     try {
-      // Background script에 캐시 클리어 요청
-      await chrome.runtime.sendMessage({ action: "clearCache" });
-
-      this.showNotification("번역 캐시가 지워졌습니다!", "success");
+      await chrome.storage.local.clear();
+      this.showNotification("캐시가 지워졌습니다.", "success");
     } catch (error) {
       console.error("캐시 지우기 실패:", error);
       this.showNotification("캐시 지우기에 실패했습니다.", "error");
@@ -329,33 +238,38 @@ class PopupManager {
   }
 
   showNotification(message, type = "info") {
-    // 간단한 알림 표시
+    // 기존 알림 제거
+    const existingNotification = document.querySelector(".notification");
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    // 새 알림 생성
     const notification = document.createElement("div");
+    notification.className = `notification ${type}`;
     notification.style.cssText = `
       position: fixed;
       top: 10px;
       right: 10px;
       padding: 10px 15px;
       border-radius: 4px;
+      color: white;
       font-size: 12px;
-      font-weight: 500;
       z-index: 10000;
       transition: opacity 0.3s;
       ${
         type === "success"
-          ? "background: #d4edda; color: #155724; border: 1px solid #c3e6cb;"
-          : ""
-      }
-      ${
-        type === "error"
-          ? "background: #f8d7da; color: #721c24; border: 1px solid #f1b0b7;"
-          : ""
+          ? "background-color: #28a745;"
+          : type === "error"
+          ? "background-color: #dc3545;"
+          : "background-color: #17a2b8;"
       }
     `;
     notification.textContent = message;
 
     document.body.appendChild(notification);
 
+    // 3초 후 제거
     setTimeout(() => {
       notification.style.opacity = "0";
       setTimeout(() => {
@@ -363,36 +277,34 @@ class PopupManager {
           notification.parentNode.removeChild(notification);
         }
       }, 300);
-    }, 2000);
+    }, 3000);
   }
 
-  // 현재 탭에서 번역기 테스트
   async testTranslator() {
     try {
-      const tabs = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      if (tabs.length > 0) {
-        const response = await chrome.tabs.sendMessage(tabs[0].id, {
-          action: "test",
-          text: "Hello, this is a test.",
-        });
+      this.showNotification("번역 테스트 중...", "info");
 
-        if (response && response.success) {
-          this.showNotification("번역 테스트가 성공했습니다!", "success");
-        } else {
-          this.showNotification("번역 테스트에 실패했습니다.", "error");
-        }
+      const response = await chrome.runtime.sendMessage({
+        action: "translate",
+        text: "Hello, this is a test!",
+        targetLanguage: this.settings.targetLanguage,
+      });
+
+      if (response.error) {
+        this.showNotification(`번역 테스트 실패: ${response.error}`, "error");
+      } else {
+        this.showNotification(
+          `번역 테스트 성공: ${response.translatedText}`,
+          "success"
+        );
       }
     } catch (error) {
-      console.error("번역 테스트 실패:", error);
-      this.showNotification("번역 테스트에 실패했습니다.", "error");
+      this.showNotification(`번역 테스트 중 오류: ${error.message}`, "error");
     }
   }
 }
 
-// 팝업 로드 시 초기화
+// DOM 로드 완료 시 초기화
 document.addEventListener("DOMContentLoaded", () => {
   new PopupManager();
 });

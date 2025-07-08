@@ -189,6 +189,21 @@
       .clear-button:hover {
         background-color: #5a6268;
       }
+
+      .api-info {
+        background-color: #e3f2fd;
+        border: 1px solid #90caf9;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 11px;
+        color: #1565c0;
+        line-height: 1.4;
+      }
+
+      .api-info strong {
+        color: #0d47a1;
+      }
     </style>
   </head>
   <body>
@@ -200,72 +215,76 @@
       <span id="statusText">상태 확인 중...</span>
     </div>
 
-    <button class="toggle-button" id="toggleButton">
-      자막 번역기 켜기/끄기
-    </button>
+    <button id="toggleButton" class="toggle-button">자막 번역기 켜기</button>
 
     <div class="section">
-      <h3>기본 설정</h3>
+      <h3>📋 번역 설정</h3>
+
       <div class="control-group">
-        <label for="targetLanguage">번역 대상 언어:</label>
+        <label for="targetLanguage">번역 대상 언어</label>
         <select id="targetLanguage">
-          <option value="ko">한국어</option>
-          <option value="ja">일본어</option>
-          <option value="zh">중국어</option>
-          <option value="es">스페인어</option>
-          <option value="fr">프랑스어</option>
-          <option value="de">독일어</option>
-          <option value="ru">러시아어</option>
-          <option value="ar">아랍어</option>
+          <option value="ko">한국어 (Korean)</option>
+          <option value="ja">일본어 (Japanese)</option>
+          <option value="zh">중국어 (Chinese)</option>
+          <option value="es">스페인어 (Spanish)</option>
+          <option value="fr">프랑스어 (French)</option>
+          <option value="de">독일어 (German)</option>
+          <option value="it">이탈리아어 (Italian)</option>
+          <option value="pt">포르투갈어 (Portuguese)</option>
+          <option value="ru">러시아어 (Russian)</option>
+          <option value="ar">아랍어 (Arabic)</option>
         </select>
       </div>
 
-      <div class="control-group">
-        <label for="translationProvider">번역 서비스:</label>
-        <select id="translationProvider">
-          <option value="libre">LibreTranslate (무료)</option>
-          <option value="google">Google Translate (API 키 필요)</option>
-          <option value="deepl">DeepL (API 키 필요)</option>
-        </select>
-        <div class="provider-info" id="providerInfo">
-          무료 번역 서비스를 사용합니다. 더 정확한 번역을 위해서는 API 키를
-          설정해주세요.
-        </div>
+      <div class="api-info">
+        <strong>로컬 LibreTranslate 서버</strong><br />
+        • 완전 무료 (사용량 제한 없음)<br />
+        • 로컬 서버로 빠른 번역 제공<br />
+        • 오프라인 작동 및 개인정보 보호<br />
+        • 서버: localhost:5001
       </div>
     </div>
 
     <div class="section">
-      <h3>자막 스타일</h3>
+      <h3>🎨 자막 스타일</h3>
+
       <div class="control-group">
-        <label for="fontSize">글자 크기:</label>
+        <label for="fontSize">글자 크기</label>
         <div class="range-group">
-          <input type="range" id="fontSize" min="12" max="24" value="16" />
+          <input
+            type="range"
+            id="fontSize"
+            min="12"
+            max="24"
+            value="16"
+            step="1"
+          />
           <span class="value" id="fontSizeValue">16px</span>
         </div>
       </div>
 
       <div class="control-group">
-        <label for="textColor">글자 색상:</label>
+        <label for="textColor">글자 색상</label>
         <input
           type="color"
           id="textColor"
-          value="#ffffff"
           class="color-picker"
+          value="#ffffff"
         />
       </div>
 
       <div class="control-group">
-        <label for="backgroundColor">배경 색상:</label>
+        <label for="backgroundColor">배경 색상</label>
         <input
           type="color"
           id="backgroundColor"
-          value="#000000"
           class="color-picker"
+          value="#000000"
         />
       </div>
 
       <div class="control-group">
-        <label for="backgroundOpacity">배경 투명도:</label>
+        <label for="backgroundOpacity">배경 투명도</label>
         <div class="range-group">
           <input
             type="range"
@@ -273,6 +292,7 @@
             min="0"
             max="100"
             value="80"
+            step="5"
           />
           <span class="value" id="backgroundOpacityValue">80%</span>
         </div>
@@ -280,23 +300,10 @@
     </div>
 
     <div class="section">
-      <h3>API 키 설정</h3>
-      <div class="control-group">
-        <label for="googleApiKey">Google Translate API 키:</label>
-        <input type="password" id="googleApiKey" placeholder="선택사항" />
-      </div>
+      <h3>⚙️ 기타 설정</h3>
 
-      <div class="control-group">
-        <label for="deeplApiKey">DeepL API 키:</label>
-        <input type="password" id="deeplApiKey" placeholder="선택사항" />
-      </div>
-    </div>
-
-    <div class="section">
-      <button class="save-button" id="saveButton">설정 저장</button>
-      <button class="clear-button" id="clearCacheButton">
-        번역 캐시 지우기
-      </button>
+      <button id="saveButton" class="save-button">설정 저장</button>
+      <button id="clearCacheButton" class="clear-button">캐시 지우기</button>
     </div>
 
     <script src="popup.js"></script>

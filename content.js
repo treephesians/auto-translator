@@ -4,8 +4,9 @@ class SubtitleTranslator {
     this.isEnabled = true;
     this.observers = new Map();
     this.translatedElements = new WeakMap();
-    this.lastProcessedText = "";
-    this.debounceTimer = null;
+    this.translationCache = new Map(); // 텍스트 기반 번역 캐시
+    this.processingElements = new WeakSet(); // 현재 처리 중인 요소들
+    this.elementDebounceTimers = new WeakMap(); // 요소별 디바운스 타이머
     this.settings = {
       targetLanguage: "ko",
       fontSize: "16px",
@@ -70,13 +71,17 @@ class SubtitleTranslator {
     // 기존 자막 요소들 확인
     this.checkExistingSubtitles();
 
-    // 최적화된 DOM 변화 감지 (characterData 위주)
+    // 최적화된 DOM 변화 감지
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.type === "characterData") {
           // 텍스트 변경 - 가장 일반적인 자막 변화
           const element = mutation.target.parentElement;
-          if (element && this.isSubtitleElement(element)) {
+          if (
+            element &&
+            this.isSubtitleElement(element) &&
+            !this.isTranslatedElement(element)
+          ) {
             this.processSubtitleElement(element);
           }
         } else if (mutation.type === "childList") {
@@ -84,7 +89,8 @@ class SubtitleTranslator {
           mutation.addedNodes.forEach((node) => {
             if (
               node.nodeType === Node.ELEMENT_NODE &&
-              this.isSubtitleElement(node)
+              this.isSubtitleElement(node) &&
+              !this.isTranslatedElement(node)
             ) {
               this.processSubtitleElement(node);
             }
@@ -93,11 +99,10 @@ class SubtitleTranslator {
       });
     });
 
-    // characterData 중심의 효율적인 관찰 설정
     observer.observe(document.body, {
-      childList: true, // 최소한의 새 요소 감지
+      childList: true,
       subtree: true,
-      characterData: true, // 메인 감지 대상
+      characterData: true,
     });
 
     this.observers.set("main", observer);
@@ -155,10 +160,14 @@ class SubtitleTranslator {
     if (!this.isEnabled || !element) return;
 
     const text = this.extractTextContent(element);
-    console.log(text);
     if (!text || text.length < 2) return;
 
-    // 중복 처리 방지
+    // 이미 처리 중인 요소는 스킵
+    if (this.processingElements.has(element)) {
+      return;
+    }
+
+    // 동일한 요소의 동일한 텍스트는 스킵
     if (
       this.translatedElements.has(element) &&
       this.translatedElements.get(element) === text
@@ -166,11 +175,18 @@ class SubtitleTranslator {
       return;
     }
 
-    // 디바운스 적용
-    clearTimeout(this.debounceTimer);
-    this.debounceTimer = setTimeout(() => {
+    // 요소별 디바운스 적용
+    const existingTimer = this.elementDebounceTimers.get(element);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(() => {
       this.translateAndInsert(element, text);
-    }, 100);
+      this.elementDebounceTimers.delete(element);
+    }, 300); // 디바운스 시간을 300ms로 증가
+
+    this.elementDebounceTimers.set(element, timer);
   }
 
   extractTextContent(element) {
@@ -178,16 +194,39 @@ class SubtitleTranslator {
   }
 
   async translateAndInsert(element, text) {
+    // 처리 중 표시
+    this.processingElements.add(element);
+
     try {
+      const cacheKey = `${text}:${this.settings.targetLanguage}`;
+
+      // 다시 한번 캐시 확인 (디바운스 동안 다른 요소가 번역했을 수 있음)
+      if (this.translationCache.has(cacheKey)) {
+        const cachedTranslation = this.translationCache.get(cacheKey);
+        this.translatedElements.set(element, text);
+        return;
+      }
+
       // 번역 요청
       const translatedText = await this.requestTranslation(text);
 
       if (translatedText) {
-        this.insertTranslatedSubtitle(element, translatedText);
+        // 캐시에 저장 (최대 100개 항목 유지)
+        if (this.translationCache.size >= 100) {
+          const firstKey = this.translationCache.keys().next().value;
+          this.translationCache.delete(firstKey);
+        }
+        this.translationCache.set(cacheKey, translatedText);
+
         this.translatedElements.set(element, text);
+        console.log(`[원문] ${text}`);
+        console.log(`[번역] ${translatedText}`);
       }
     } catch (error) {
       console.error("번역 실패:", error);
+    } finally {
+      // 처리 완료 표시
+      this.processingElements.delete(element);
     }
   }
 
@@ -206,90 +245,23 @@ class SubtitleTranslator {
     });
   }
 
-  insertTranslatedSubtitle(originalElement, translatedText) {
-    // 기존 번역 div 찾기
-    let translatedElement = originalElement.querySelector(
-      ".translated-subtitle"
-    );
-    if (translatedElement) {
-      // 이미 있으면 텍스트만 갱신
-      translatedElement.textContent = translatedText;
-      this.applyTranslatedSubtitleStyle(translatedElement);
-    } else {
-      // 없으면 새로 생성
-      translatedElement = document.createElement("div");
-      translatedElement.className = "translated-subtitle";
-      translatedElement.textContent = translatedText;
-      this.applyTranslatedSubtitleStyle(translatedElement);
-      this.insertTranslatedElement(originalElement, translatedElement);
-    }
-  }
-
-  applyTranslatedSubtitleStyle(element) {
-    element.style.cssText = `
-      font-size: ${this.settings.fontSize};
-      color: ${this.settings.textColor};
-      background-color: ${this.settings.backgroundColor};
-      padding: 4px 8px;
-      border-radius: 4px;
-      margin-top: 4px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      line-height: 1.4;
-      text-align: center;
-      word-wrap: break-word;
-      z-index: 2147483647;
-      position: relative;
-    `;
-  }
-
-  insertTranslatedElement(originalElement, translatedElement) {
-    const parent = originalElement.parentNode;
-    if (parent) {
-      // 원본 자막 바로 다음에 삽입
-      if (originalElement.nextSibling) {
-        parent.insertBefore(translatedElement, originalElement.nextSibling);
-      } else {
-        parent.appendChild(translatedElement);
-      }
-    }
-  }
-
   // 설정 업데이트
   updateSettings(newSettings) {
     this.settings = { ...this.settings, ...newSettings };
-    this.reapplyStyles();
-  }
-
-  reapplyStyles() {
-    const translatedElements = document.querySelectorAll(
-      ".translated-subtitle"
-    );
-    translatedElements.forEach((element) => {
-      this.applyTranslatedSubtitleStyle(element);
-    });
+    // 언어가 변경되면 캐시 초기화
+    if (
+      newSettings.targetLanguage &&
+      newSettings.targetLanguage !== this.settings.targetLanguage
+    ) {
+      this.translationCache.clear();
+      console.log("[설정 변경] 번역 캐시 초기화");
+    }
   }
 
   // 활성화/비활성화
   toggle() {
     this.isEnabled = !this.isEnabled;
-
-    if (!this.isEnabled) {
-      // 모든 번역 자막 숨기기
-      const translatedElements = document.querySelectorAll(
-        ".translated-subtitle"
-      );
-      translatedElements.forEach((element) => {
-        element.style.display = "none";
-      });
-    } else {
-      // 번역 자막 다시 보이기
-      const translatedElements = document.querySelectorAll(
-        ".translated-subtitle"
-      );
-      translatedElements.forEach((element) => {
-        element.style.display = "block";
-      });
-    }
+    console.log(`[번역기 ${this.isEnabled ? "활성화" : "비활성화"}]`);
   }
 
   // 정리
@@ -297,12 +269,23 @@ class SubtitleTranslator {
     this.observers.forEach((observer) => observer.disconnect());
     this.observers.clear();
 
-    const translatedElements = document.querySelectorAll(
-      ".translated-subtitle"
-    );
-    translatedElements.forEach((element) => element.remove());
+    // 모든 디바운스 타이머 정리
+    this.elementDebounceTimers = new WeakMap();
 
-    clearTimeout(this.debounceTimer);
+    // 캐시 정리
+    this.translationCache.clear();
+    this.processingElements = new WeakSet();
+  }
+
+  // 번역된 자막 요소인지 확인
+  isTranslatedElement(element) {
+    if (!element) return false;
+
+    // 번역 자막 자체이거나 그 하위 요소인지 확인
+    return (
+      element.classList.contains("translated-subtitle") ||
+      element.closest(".translated-subtitle") !== null
+    );
   }
 }
 
@@ -329,6 +312,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
   } else if (request.action === "updateSettings") {
     subtitleTranslator?.updateSettings(request.settings);
+    sendResponse({ success: true });
+  } else if (request.action === "init") {
+    // background.js에서 초기화 신호를 받으면 확장자 재시작
+    if (!subtitleTranslator) {
+      initializeTranslator();
+    }
     sendResponse({ success: true });
   }
 });
